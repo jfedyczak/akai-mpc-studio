@@ -32,3 +32,9 @@ Please run your favourite software and select `My Studio` as MIDI device. You sh
 ## Remarks
 
 This is work in progress and experimental, so use at your own risk. I've tested it with [Addictive Drums 2](https://www.xlnaudio.com/products/addictive_drums_2) and it works ok.
+
+## Credits
+
+This would not be possible without:
+
+- [MPC Studio MIDI Specs](https://github.com/bcrowe306/MPC-Studio-Mk2-Midi-Sysex-Charts)
