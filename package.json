@@ -1,0 +1,14 @@
+{
+  "name": "akai-mpc-studio",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jakub Fedyczak",
+  "license": "MIT",
+  "dependencies": {
+    "midi": "^2.0.0"
+  }
+}
