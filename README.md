@@ -4,7 +4,7 @@ This is a script that will make the unit light up and give touch feedback using 
 
 ## Demo
 
-<video height="480" src="https://github.com/jfedyczak/akai-mpc-studio/assets/923346/81077230-a56d-4211-9e0f-bde15b043b56"></video>
+<video height="480" src="https://github.com/jfedyczak/akai-mpc-studio/assets/923346/61a9dd49-fe0e-429c-8735-e213d0c1e381"></video>
 
 ## How it works
 
