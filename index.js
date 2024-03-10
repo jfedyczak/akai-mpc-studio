@@ -1,8 +1,27 @@
 // based on https://github.com/bcrowe306/MPC-Studio-Mk2-Midi-Sysex-Charts
 
+const fs = require("fs");
+
+const config = JSON.parse(fs.readFileSync("settings.json", "utf8"));
+
+config.colors = config.colors.map((color) => ({
+  r: parseInt(color.substr(0, 2), 16),
+  g: parseInt(color.substr(2, 2), 16),
+  b: parseInt(color.substr(4, 2), 16),
+}));
+
 const MONO_LED_OFF = 0;
 const MONO_LED_DIM = 1;
 const MONO_LED_ON = 2;
+
+const COLOR_LED_OFF = 0;
+const COLOR_1_DIM = 1;
+const COLOR_2_DIM = 2;
+const COLOR_1_ON = 3;
+const COLOR_2_ON = 4;
+
+const EVENT_PAD_PRESSED = 153;
+const EVENT_PAD_RELEASED = 137;
 
 const midi = require("midi");
 
@@ -13,8 +32,13 @@ const PAD_NOTES = [
 ];
 const NOTE_TO_PAD = new Map(PAD_NOTES.map((note, index) => [note, index]));
 
+const BUTTON_FULL_LEVEL = 39;
+
 class AkaiMPCStudio {
   constructor(midiName) {
+    this.state = {
+      fullLevel: false,
+    };
     this.input = new midi.Input();
     this.output = new midi.Output();
 
@@ -64,17 +88,62 @@ class AkaiMPCStudio {
   }
 
   messageHandler(deltaTime, message) {
-    this.virtual.sendMessage(message);
-    if (message[0] === 153) {
-      // pad pressed
+    let forwardMessage = [message[0], message[1], message[2]];
+    if (message[0] === EVENT_PAD_PRESSED) {
       const pad = NOTE_TO_PAD.get(message[1]);
       this.setPadColor(pad, 127, 127, 127);
-    } else if ((message[0] = 137 && message[2] === 0)) {
-      // pad released
-      const pad = NOTE_TO_PAD.get(message[1]);
-      this.setPadColor(pad, 31, 0, 63);
+      if (this.state.fullLevel) {
+        forwardMessage[2] = 127;
+        console.log(forwardMessage);
+      }
+    } else if (message[0] === EVENT_PAD_RELEASED) {
+      if (message[2] === 0) {
+        const pad = NOTE_TO_PAD.get(message[1]);
+        this.setPadColorFromConfig(pad);
+      } else {
+        if (this.state.fullLevel) {
+          console.log("why");
+          forwardMessage = null;
+        }
+      }
+    } else if (message[0] === 169) {
+      if (this.state.fullLevel) {
+        forwardMessage = null;
+      }
+    } else if (message[0] === 144) {
+      if (this.buttonPressed(message[1])) {
+        forwardMessage = null;
+      }
+    } else if (message[0] === 128) {
+      if (this.buttonReleased(message[1])) {
+        forwardMessage = null;
+      }
     }
-    console.log(`m: ${message} d: ${deltaTime}`);
+    if (forwardMessage) {
+      this.virtual.sendMessage(forwardMessage);
+      console.log(`m: ${forwardMessage} d: ${deltaTime}`);
+    } else {
+      console.log(" -- skipped");
+    }
+  }
+
+  buttonReleased(button) {
+    if (button === BUTTON_FULL_LEVEL) {
+      this.state.fullLevel = !this.state.fullLevel;
+      this.setButtonColor(
+        BUTTON_FULL_LEVEL,
+        this.state.fullLevel ? COLOR_2_ON : COLOR_1_DIM
+      );
+      return true;
+    }
+    return false;
+  }
+
+  buttonPressed(button) {
+    if (button === BUTTON_FULL_LEVEL) {
+      return true;
+    }
+    return false;
   }
 
   sendMessage(message) {
@@ -102,20 +171,25 @@ class AkaiMPCStudio {
     ]);
   }
 
+  setPadColorFromConfig(pad) {
+    const color = config.colors[pad];
+    this.setPadColor(pad, color.r, color.g, color.b);
+  }
+
   reset() {
     for (let pad = 0; pad < 16; pad++) {
       this.setPadColor(pad, 0, 0, 0);
     }
+
+    this.setButtonColor(BUTTON_FULL_LEVEL, MONO_LED_OFF);
   }
 
   async initPads() {
     for (let pad = 0; pad < 16; pad++) {
-      for (let c = 0; c < 64; c += 4) {
-        this.setPadColor(pad, c / 2, 0, c);
-        await delay(3);
-      }
-      this.setPadColor(pad, 31, 0, 63);
+      this.setPadColorFromConfig(pad);
+      await delay(50);
     }
+    this.setButtonColor(BUTTON_FULL_LEVEL, MONO_LED_DIM);
   }
 }
 const AKAI_PORT_NAME = "MPC Studio MPC Public";
